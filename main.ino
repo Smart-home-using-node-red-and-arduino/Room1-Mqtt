@@ -29,11 +29,15 @@ void setup() {
   WiFi.begin(cred.ssid, cred.password);
  
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
     Serial.println("Connecting to WiFi..");
+    digitalWrite(LED,LOW);
+    delay(300);
+    digitalWrite(LED,HIGH);
+    delay(300);
   }
   Serial.print("Connected to WiFi :");
   Serial.println(WiFi.SSID());
+  digitalWrite(LED,LOW);
  
   client.setServer(cred.mqtt_host_ip, cred.mqtt_port);
   client.setCallback(mqtt_callback);
