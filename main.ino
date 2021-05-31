@@ -2,6 +2,8 @@
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <string.h>
+//#include <Ticker.h> // ticker library to check mqtt connection status ( if disconnected then try to reconnect )
+
 
 #define LED 2
 #define relay D1
@@ -9,11 +11,16 @@
  
 WiFiClient espClient;
 PubSubClient client(espClient);
+//Ticker check_Mqtt_connection; // Check if the connection is lost try to reconnect ( maybe mqtt server was shutdown unexpectedly or restarted! )
+
+void checkMqttServer();
  
 void setup() {
   pinMode(LED,OUTPUT);
   pinMode(relay,OUTPUT);
   Serial.begin(115200);
+
+//  check_Mqtt_connection.attach(180, checkMqttServer); // check mqtt server connection every 3 minutes (3*60 seconds)
 
   // get credentials from c function
   // function is declared in credentials.c 
@@ -63,7 +70,22 @@ void setup() {
   client.subscribe("room1/BuiltInLamp");
  
 }
- 
+//
+//void checkMqttServer(){
+//  while (!client.connected()) {
+//    Serial.println("Reconnecting to MQTT...");
+//
+//    if (client.connect("nodeMcu")) {
+// 
+//      Serial.println("connected");
+//    } else {
+// 
+//      Serial.print("failed with state ");
+//      Serial.println(client.state());  //If you get state 5: mismatch in configuration
+//      delay(10000);
+//    }
+//  }
+//}
 void mqtt_callback(char* topic, byte* payload, unsigned int length) {
  
     Serial.print("Message arrived in topic: ");
