@@ -38,11 +38,14 @@ float Humidity;
 void setup() {
   Serial.begin(115200);
   delay(100);
+
+  // setup pins
   pinMode(LED,OUTPUT);
   pinMode(relay,OUTPUT);
   pinMode(DHTPin, INPUT);
 
-  check_Mqtt_connection.attach(30, checkMqttServer); // check mqtt server connection every 3 minutes (3*60 seconds)
+  // check mqtt server connection every 3 minutes (3*60 seconds)
+  check_Mqtt_connection.attach(180, checkMqttServer);
 
   // start the dht library
   dht.begin();   
@@ -145,52 +148,9 @@ void setup() {
 
 }
 
-void checkMqttServer(){
-  
-//  readTempHum();
-  while (!client.connected()) {
-    Serial.println("Reconnecting to MQTT...");
 
-    if (client.connect("nodeMcu")) {
- 
-      Serial.println("connected");
-      // if mqtt server connected  
-      // publish temperature and humidity to server
-//      sendTempHum();
-      
-    } else {
- 
-      Serial.print("failed with state ");
-      Serial.println(client.state());  //If you get state 5: mismatch in configuration
-      delay(10000);
-    }
-  }
-}
 
-boolean readTempHum(){
-  // read temperature and humidity
-  Temperature = dht.readTemperature();
-  Humidity = dht.readHumidity();
-
-  // print temp and humidity for debug 
-  Serial.print("Temp: ");
-  Serial.println(Temperature);
-
-  Serial.print("Humidity: ");
-  Serial.println(Humidity);
-  
-  return true;
-}
-boolean sendTempHum(){
-  char temp[6];
-  char hum[6];
-  dtostrf(Temperature, 4,2, temp);
-  dtostrf(Humidity, 4,2, hum);
-  client.publish("Temperature0", temp);
-  client.publish("Humidity0", hum);
-
-  return true;
-}
+// mqtt callback function
 void mqtt_callback(char* topic, byte* payload, unsigned int length) {
  
     Serial.print("Message arrived in topic: ");
@@ -249,13 +209,61 @@ void loop() {
 }
 
 unsigned long previousMillis = 0;
-// this function is used to read temperature and send it to server every 20 seconds
-const long interval = 20000;
+// this function is used to read temperature and send it to server every 2 minutes (120 seconds)
+const long interval = 120000;
 void checkReadingSensor(){
   unsigned long current = millis();
   if( current - previousMillis > interval ){
     previousMillis = current;
     readTempHum();
     sendTempHum();
+  }
+}
+
+boolean readTempHum(){
+  // read temperature and humidity
+  Temperature = dht.readTemperature();
+  Humidity = dht.readHumidity();
+
+  // print temp and humidity for debug 
+  Serial.print("Temp: ");
+  Serial.println(Temperature);
+
+  Serial.print("Humidity: ");
+  Serial.println(Humidity);
+  
+  return true;
+}
+boolean sendTempHum(){
+  char temp[6];
+  char hum[6];
+  dtostrf(Temperature, 4,2, temp);
+  dtostrf(Humidity, 4,2, hum);
+  client.publish("Temperature0", temp);
+  client.publish("Humidity0", hum);
+
+  return true;
+}
+
+
+void checkMqttServer(){
+  
+//  readTempHum();
+  while (!client.connected()) {
+    Serial.println("Reconnecting to MQTT...");
+
+    if (client.connect("nodeMcu")) {
+ 
+      Serial.println("connected");
+      // if mqtt server connected  
+      // publish temperature and humidity to server
+//      sendTempHum();
+      
+    } else {
+ 
+      Serial.print("failed with state ");
+      Serial.println(client.state());  //If you get state 5: mismatch in configuration
+      delay(10000);
+    }
   }
 }
