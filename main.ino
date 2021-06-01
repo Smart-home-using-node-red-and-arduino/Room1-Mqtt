@@ -6,10 +6,13 @@
 #include <ArduinoOTA.h>
 #include <string.h>
 #include <Ticker.h> // ticker library to check mqtt connection status ( if disconnected then try to reconnect )
+#include "DHT.h"
 
 
 #define LED 2
 #define relay D1
+#define DHTTYPE DHT22   // DHT 22  
+#define DHTPin 4
 
 
 // get credentials from c function
@@ -22,17 +25,27 @@ struct credentials cred = getCredentials();
 WiFiClient espClient;
 PubSubClient client(espClient);
 Ticker check_Mqtt_connection; // Check if the connection is lost try to reconnect ( maybe mqtt server was shutdown unexpectedly or restarted! )
+DHT dht(DHTPin, DHTTYPE);                
 
 void checkMqttServer();
+void checkReadingSensor();
+boolean readTempHum();
+boolean sendTempHum();
+
+float Temperature;
+float Humidity;
  
 void setup() {
+  Serial.begin(115200);
+  delay(100);
   pinMode(LED,OUTPUT);
   pinMode(relay,OUTPUT);
-  Serial.begin(115200);
+  pinMode(DHTPin, INPUT);
 
-  check_Mqtt_connection.attach(180, checkMqttServer); // check mqtt server connection every 3 minutes (3*60 seconds)
+  check_Mqtt_connection.attach(30, checkMqttServer); // check mqtt server connection every 3 minutes (3*60 seconds)
 
-
+  // start the dht library
+  dht.begin();   
 
   // print credentials for debug purposes
   /* Serial.println("credentials");
@@ -129,16 +142,22 @@ void setup() {
   client.publish("room1", "room1 nodeMCU connected!");
   client.subscribe("room1/lamp");
   client.subscribe("room1/BuiltInLamp");
- 
+
 }
 
 void checkMqttServer(){
+  
+//  readTempHum();
   while (!client.connected()) {
     Serial.println("Reconnecting to MQTT...");
 
     if (client.connect("nodeMcu")) {
  
       Serial.println("connected");
+      // if mqtt server connected  
+      // publish temperature and humidity to server
+//      sendTempHum();
+      
     } else {
  
       Serial.print("failed with state ");
@@ -146,6 +165,31 @@ void checkMqttServer(){
       delay(10000);
     }
   }
+}
+
+boolean readTempHum(){
+  // read temperature and humidity
+  Temperature = dht.readTemperature();
+  Humidity = dht.readHumidity();
+
+  // print temp and humidity for debug 
+  Serial.print("Temp: ");
+  Serial.println(Temperature);
+
+  Serial.print("Humidity: ");
+  Serial.println(Humidity);
+  
+  return true;
+}
+boolean sendTempHum(){
+  char temp[6];
+  char hum[6];
+  dtostrf(Temperature, 4,2, temp);
+  dtostrf(Humidity, 4,2, hum);
+  client.publish("Temperature0", temp);
+  client.publish("Humidity0", hum);
+
+  return true;
 }
 void mqtt_callback(char* topic, byte* payload, unsigned int length) {
  
@@ -195,8 +239,23 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
   Serial.println();
   Serial.println("-----------------------");  
 }
- 
+
+
 void loop() {
   ArduinoOTA.handle();
   client.loop();
+
+  checkReadingSensor();
+}
+
+unsigned long previousMillis = 0;
+// this function is used to read temperature and send it to server every 20 seconds
+const long interval = 20000;
+void checkReadingSensor(){
+  unsigned long current = millis();
+  if( current - previousMillis > interval ){
+    previousMillis = current;
+    readTempHum();
+    sendTempHum();
+  }
 }
