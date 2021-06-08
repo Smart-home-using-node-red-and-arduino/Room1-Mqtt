@@ -209,8 +209,8 @@ void loop() {
 }
 
 unsigned long previousMillis = 0;
-// this function is used to read temperature and send it to server every 2 minutes (120 seconds)
-const long interval = 120000;
+// this function is used to read temperature and send it to server every 15 minutes (900 seconds)
+const long interval = 900000; // 900 seconds
 void checkReadingSensor(){
   unsigned long current = millis();
   if( current - previousMillis > interval ){
@@ -250,20 +250,23 @@ void checkMqttServer(){
   
 //  readTempHum();
   while (!client.connected()) {
+    digitalWrite(LED,HIGH);
     Serial.println("Reconnecting to MQTT...");
 
     if (client.connect("nodeMcu")) {
  
       Serial.println("connected");
       // if mqtt server connected  
-      // publish temperature and humidity to server
-//      sendTempHum();
       
     } else {
- 
+      // if it was disconneted from mqtt server built in led will blink
+      digitalWrite(LED,LOW);
+      
       Serial.print("failed with state ");
       Serial.println(client.state());  //If you get state 5: mismatch in configuration
-      delay(10000);
+      delay(1000);
+      digitalWrite(LED,HIGH);
+      delay(1000);
     }
   }
 }
