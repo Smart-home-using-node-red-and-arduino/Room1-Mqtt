@@ -5,7 +5,7 @@
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <string.h>
-#include <Ticker.h> // ticker library to check mqtt connection status ( if disconnected then try to reconnect )
+//#include <Ticker.h> // ticker library to check mqtt connection status ( if disconnected then try to reconnect )
 #include "DHT.h"
 
 
@@ -24,11 +24,11 @@ struct credentials cred = getCredentials();
  
 WiFiClient espClient;
 PubSubClient client(espClient);
-Ticker check_Mqtt_connection; // Check if the connection is lost try to reconnect ( maybe mqtt server was shutdown unexpectedly or restarted! )
+//Ticker check_Mqtt_connection; // Check if the connection is lost try to reconnect ( maybe mqtt server was shutdown unexpectedly or restarted! )
 DHT dht(DHTPin, DHTTYPE);                
 
-void checkMqttServer();
-void checkReadingSensor();
+boolean checkMqttServer();
+boolean checkReadingSensor();
 boolean readTempHum();
 boolean sendTempHum();
 
@@ -44,8 +44,10 @@ void setup() {
   pinMode(relay,OUTPUT);
   pinMode(DHTPin, INPUT);
 
+  digitalWrite(relay, HIGH);
+
   // check mqtt server connection every 3 minutes (3*60 seconds)
-  check_Mqtt_connection.attach(180, checkMqttServer);
+//  check_Mqtt_connection.attach(180, checkMqttServer);
 
   // start the dht library
   dht.begin();   
@@ -131,12 +133,12 @@ void setup() {
       Serial.println("connected");  
  
     } else {
+      delay(500);
       digitalWrite(LED,LOW);
       
       Serial.print("failed with state ");
       Serial.println(client.state());  //If you get state 5: mismatch in configuration
-      delay(500);
-      digitalWrite(LED,HIGH);
+      
       delay(500);
  
     }
@@ -205,19 +207,23 @@ void loop() {
   ArduinoOTA.handle();
   client.loop();
 
+  if( !client.connected() )
+    checkMqttServer();
+   
   checkReadingSensor();
 }
 
 unsigned long previousMillis = 0;
 // this function is used to read temperature and send it to server every 15 minutes (900 seconds)
 const long interval = 900000; // 900 seconds
-void checkReadingSensor(){
+boolean checkReadingSensor(){
   unsigned long current = millis();
   if( current - previousMillis > interval ){
     previousMillis = current;
     readTempHum();
     sendTempHum();
   }
+  return true;
 }
 
 boolean readTempHum(){
@@ -246,9 +252,8 @@ boolean sendTempHum(){
 }
 
 
-void checkMqttServer(){
+boolean checkMqttServer(){
   
-//  readTempHum();
   while (!client.connected()) {
     digitalWrite(LED,HIGH);
     Serial.println("Reconnecting to MQTT...");
@@ -256,17 +261,16 @@ void checkMqttServer(){
     if (client.connect("nodeMcu")) {
  
       Serial.println("connected");
-      // if mqtt server connected  
-      
+      return true;
     } else {
       // if it was disconneted from mqtt server built in led will blink
+      delay(1000);
       digitalWrite(LED,LOW);
       
       Serial.print("failed with state ");
       Serial.println(client.state());  //If you get state 5: mismatch in configuration
       delay(1000);
-      digitalWrite(LED,HIGH);
-      delay(1000);
     }
   }
+  return true;
 }
