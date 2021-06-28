@@ -12,7 +12,7 @@
 #define LED 2
 #define relay D1
 #define DHTTYPE DHT22   // DHT 22  
-#define DHTPin 4
+#define DHTPin D4
 
 
 // get credentials from c function
@@ -63,7 +63,11 @@ void setup() {
   Serial.println("Booting");
   WiFi.mode(WIFI_STA);
   WiFi.begin(cred.ssid, cred.password);
- 
+
+  Serial.print("MAC Addr:\t");
+  // print mac address
+  Serial.println(WiFi.macAddress());
+  
   while (WiFi.waitForConnectResult() != WL_CONNECTED) {
     Serial.println("Connection Failed! Rebooting...");
     delay(5000);
